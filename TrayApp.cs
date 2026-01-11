@@ -1,3 +1,5 @@
+using System.Drawing.Drawing2D;
+
 namespace HelloRemoteKM;
 
 public enum AppMode
@@ -16,6 +18,8 @@ public class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _targetIpItem;
     private readonly SynchronizationContext _syncContext;
+    private readonly Icon _idleIcon;
+    private readonly Icon _activeIcon;
 
     private AppMode _mode = AppMode.Controller;
     private string _targetIp = "192.168.1.100";
@@ -28,6 +32,8 @@ public class TrayApp : ApplicationContext
     public TrayApp()
     {
         _syncContext = SynchronizationContext.Current ?? new SynchronizationContext();
+        _idleIcon = CreateIcon(Color.FromArgb(100, 149, 237)); // Cornflower blue
+        _activeIcon = CreateIcon(Color.FromArgb(50, 205, 50));  // Lime green
 
         _modeControllerItem = new ToolStripMenuItem("Controller (send input)", null, OnSetController);
         _modeReceiverItem = new ToolStripMenuItem("Receiver (receive input)", null, OnSetReceiver);
@@ -46,7 +52,7 @@ public class TrayApp : ApplicationContext
 
         _trayIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _idleIcon,
             Text = "HelloRemoteKM",
             ContextMenuStrip = contextMenu,
             Visible = true
@@ -55,6 +61,18 @@ public class TrayApp : ApplicationContext
         _trayIcon.DoubleClick += (_, _) => ToggleCapture();
 
         SetMode(AppMode.Controller);
+    }
+
+    private static Icon CreateIcon(Color color)
+    {
+        using var bitmap = new Bitmap(16, 16);
+        using var g = Graphics.FromImage(bitmap);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using var brush = new SolidBrush(color);
+        g.FillEllipse(brush, 1, 1, 14, 14);
+        using var pen = new Pen(Color.FromArgb(60, 60, 60), 1);
+        g.DrawEllipse(pen, 1, 1, 13, 13);
+        return Icon.FromHandle(bitmap.GetHicon());
     }
 
     private void SetMode(AppMode mode)
@@ -106,12 +124,12 @@ public class TrayApp : ApplicationContext
             if (isCapturing)
             {
                 UpdateStatus($"ACTIVE - Sending to {_targetIp}");
-                _trayIcon.Icon = SystemIcons.Hand;
+                _trayIcon.Icon = _activeIcon;
             }
             else
             {
                 UpdateStatus("Ready - Press Scroll Lock to control");
-                _trayIcon.Icon = SystemIcons.Application;
+                _trayIcon.Icon = _idleIcon;
             }
         }, null);
     }
